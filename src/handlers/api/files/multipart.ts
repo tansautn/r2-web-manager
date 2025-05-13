@@ -36,8 +36,10 @@ export async function handleMultipartInit(context: Context): Promise<Response> {
   }
 
   try {
+    // Create a multipart upload and get the uploadId
     const multipartUpload = await context.env.R2_BUCKET.createMultipartUpload(key);
     
+    // Return the proper multipartUpload object format according to Cloudflare API
     return new Response(JSON.stringify({
       uploadId: multipartUpload.uploadId,
       key: multipartUpload.key
@@ -65,17 +67,27 @@ export async function handleMultipartUpload(context: Context): Promise<Response>
     return new Response('Missing required parameters', { status: 400 });
   }
 
-  const chunk = await context.request.arrayBuffer();
-  const part = await context.env.R2_BUCKET.uploadPart(
-    key,
-    uploadId,
-    partNumber,
-    chunk
-  );
+  try {
+    // Get the multipart upload object from uploadId
+    const multipartUpload = context.env.R2_BUCKET.resumeMultipartUpload(key, uploadId);
+    
+    const chunk = await context.request.arrayBuffer();
+    
+    // Call uploadPart on the multipartUpload object, not directly on R2_BUCKET
+    const part = await multipartUpload.uploadPart(partNumber, chunk);
 
-  return new Response(JSON.stringify({ etag: part.etag }), {
-    headers: { 'Content-Type': 'application/json' }
-  });
+    return new Response(JSON.stringify({ etag: part.etag }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('Failed to upload part:', error);
+    return new Response(JSON.stringify({ 
+      error: 'Failed to upload part' 
+    }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 }
 
 export async function handleMultipartComplete(context: Context): Promise<Response> {
@@ -89,9 +101,27 @@ export async function handleMultipartComplete(context: Context): Promise<Respons
     return new Response('Missing required parameters', { status: 400 });
   }
 
-  await context.env.R2_BUCKET.completeMultipartUpload(key, uploadId, parts);
-
-  return new Response(JSON.stringify({ success: true }), {
-    headers: { 'Content-Type': 'application/json' }
-  });
+  try {
+    // Get the multipart upload object from uploadId
+    const multipartUpload = context.env.R2_BUCKET.resumeMultipartUpload(key, uploadId);
+    
+    // Call complete on the multipartUpload object
+    const object = await multipartUpload.complete(parts);
+    
+    return new Response(JSON.stringify({ 
+      success: true,
+      etag: object.etag,
+      key: object.key 
+    }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('Failed to complete multipart upload:', error);
+    return new Response(JSON.stringify({ 
+      error: 'Failed to complete multipart upload' 
+    }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 } 

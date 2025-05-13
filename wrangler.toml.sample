@@ -1,18 +1,14 @@
 ##################################
 
-name = "telegroid"
-main = "src/index.js" # or src/index_es.js if you want to use es modules format
-compatibility_date = "2023-08-01"
+name = "r2m"
+main = "src/index.ts"
+compatibility_date = "2024-01-26"
 compatibility_flags = [ "nodejs_compat" ]
 env = { }
 upload_source_maps = true
 [vars]
-GOOGLE_SERV_ACC_JSON = '' # Put your google service account json here
-TELEGRAM_BOT_TOKEN = "" # Put your telegram bot token here
-AUTHORIZED_CHATS="" # Put your authorized chats, which bot will be able to interact with here
 ADMIN_AUTH_BASIC_USR_PWD="user:password"
 USE_WEBHOOK_FALLBACK_HANDLER=0
 USE_FALLBACK_ROUTER=0
-WEBHOOK_URL = "https://name.your_user_name.workers.dev/webhook"
 
 ##################################

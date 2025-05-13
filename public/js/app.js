@@ -194,26 +194,46 @@ class FileManager {
   }
 
   attachFileEventListeners() {
-    this.fileExplorer.addEventListener('click', (e) => {
-      const fileItem = e.target.closest('.file-item');
-      if(!fileItem) {
-        return;
-      }
+    // Remove previous event listeners by cloning and replacing the element
+    const fileExplorerClone = this.fileExplorer.cloneNode(true);
+    this.fileExplorer.parentNode.replaceChild(fileExplorerClone, this.fileExplorer);
+    this.fileExplorer = fileExplorerClone;
 
-      const key = fileItem.dataset.key;
-      if(e.target.classList.contains('delete-btn')) {
-        this.deleteFile(key);
+    // Add event listeners to file items
+    const fileItems = this.fileExplorer.querySelectorAll('.file-item');
+    fileItems.forEach(item => {
+      const key = item.dataset.key;
+      
+      // Find action buttons in this item
+      const deleteBtn = item.querySelector('.delete-btn');
+      const downloadBtn = item.querySelector('.download-btn');
+      const uriBtn = item.querySelector('.download-uri');
+      
+      // Add specific listeners to each button
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.deleteFile(key);
+        });
       }
-      else if(e.target.classList.contains('download-btn')) {
-        this.downloadFile(key);
+      
+      if (downloadBtn) {
+        downloadBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.downloadFile(key);
+        });
       }
-      else if(e.target.classList.contains('download-uri')) {
-        const fullUrl = 'https://cdn.zuko.pro/' + key;
-        this.copyToClipboard(fullUrl);
+      
+      if (uriBtn) {
+        uriBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const fullUrl = 'https://cdn.zuko.pro/' + key;
+          this.copyToClipboard(fullUrl);
+        });
       }
-      else {
-        this.handleFileClick(key);
-      }
+      
+      // Add click event to the item itself
+      item.addEventListener('click', () => this.handleFileClick(key));
     });
   }
 
@@ -395,17 +415,72 @@ class FileManager {
 
   async showPreview(key) {
     try {
+      const fileExtension = key.split('.').pop().toLowerCase();
       const response = await this.api.getFile(key);
       const contentType = response.headers.get('content-type');
-
-      if(contentType.startsWith('image/')) {
+      
+      // Set preview title
+      const fileName = key.split('/').pop();
+      document.getElementById('previewTitle').textContent = fileName;
+      
+      if (contentType.startsWith('image/') || /^(jpg|jpeg|png|gif|svg|webp)$/i.test(fileExtension)) {
+        // Image preview
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
-        this.previewBody.innerHTML = `<img src="${url}" alt="${key}">`;
+        this.previewBody.innerHTML = `<img src="${url}" alt="${fileName}">`;
+      } 
+      else if (/^(txt|md|json|js|css|html|xml|csv)$/i.test(fileExtension) || 
+              contentType.includes('text/') || 
+              contentType.includes('application/json')) {
+        // Text preview
+        const text = await response.text();
+        this.previewBody.innerHTML = `<pre>${this.escapeHtml(text)}</pre>`;
+      } 
+      else if (/^(pdf)$/i.test(fileExtension) || contentType.includes('application/pdf')) {
+        // PDF preview
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        this.previewBody.innerHTML = `
+          <object data="${url}" type="application/pdf" width="100%" height="600px">
+            <p>Unable to display PDF. <a href="${url}" target="_blank">Download</a> instead.</p>
+          </object>
+        `;
+      } 
+      else if (/^(mp3|m4a|wav)$/i.test(fileExtension) || contentType.includes('audio/')) {
+        // Audio preview
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        this.previewBody.innerHTML = `
+          <audio controls style="width: 100%">
+            <source src="${url}" type="${contentType}">
+            Your browser does not support the audio element.
+          </audio>
+        `;
+      }
+      else if (/^(mp4|mov|mpeg4|mpeg)$/i.test(fileExtension) || contentType.includes('video/')) {
+        // Video preview
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        this.previewBody.innerHTML = `
+          <video controls style="max-width: 100%; max-height: 500px">
+            <source src="${url}" type="${contentType}">
+            Your browser does not support the video element.
+          </video>
+        `;
       }
       else {
-        const text = await response.text();
-        this.previewBody.innerHTML = `<pre>${text}</pre>`;
+        // Unsupported format
+        this.previewBody.innerHTML = `
+          <div class="unsupported-format">
+            <p>Cannot preview this file format.</p>
+            <button class="btn primary" id="previewDownloadBtn">Download File</button>
+          </div>
+        `;
+        
+        document.getElementById('previewDownloadBtn').addEventListener('click', () => {
+          this.closePreviewModal();
+          this.downloadFile(key);
+        });
       }
 
       this.preview.style.display = 'block';
@@ -414,6 +489,16 @@ class FileManager {
       console.error('Failed to preview file:', error);
       this.showError('Failed to preview file');
     }
+  }
+  
+  // Helper method to escape HTML content
+  escapeHtml(unsafe) {
+    return unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 
   closePreviewModal() {

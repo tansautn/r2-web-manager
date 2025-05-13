@@ -244,6 +244,11 @@ main {
 
 .preview-header h3 {
     margin: 0;
+    word-break: break-all;
+    max-width: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .close-btn {
@@ -262,11 +267,32 @@ main {
 .preview-body img {
     max-width: 100%;
     height: auto;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
 }
 
 .preview-body pre {
     white-space: pre-wrap;
     word-wrap: break-word;
+    background-color: #f5f5f5;
+    padding: 10px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-x: auto;
+}
+
+.unsupported-format {
+    text-align: center;
+    padding: 50px 20px;
+}
+
+.unsupported-format p {
+    margin-bottom: 20px;
+    font-size: 18px;
+    color: #666;
 }
 
 @media (max-width: 768px) {

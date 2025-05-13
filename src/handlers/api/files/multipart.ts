@@ -35,11 +35,24 @@ export async function handleMultipartInit(context: Context): Promise<Response> {
     return new Response('Missing key parameter', { status: 400 });
   }
 
-  const uploadId = await context.env.R2_BUCKET.createMultipartUpload(key);
-  
-  return new Response(JSON.stringify({ uploadId, key }), {
-    headers: { 'Content-Type': 'application/json' }
-  });
+  try {
+    const multipartUpload = await context.env.R2_BUCKET.createMultipartUpload(key);
+    
+    return new Response(JSON.stringify({
+      uploadId: multipartUpload.uploadId,
+      key: multipartUpload.key
+    }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('Failed to initialize multipart upload:', error);
+    return new Response(JSON.stringify({ 
+      error: 'Failed to initialize multipart upload' 
+    }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 }
 
 export async function handleMultipartUpload(context: Context): Promise<Response> {

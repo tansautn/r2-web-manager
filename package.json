@@ -1,0 +1,37 @@
+{
+  "name": "r2m",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "private" : true,
+  "scripts": {
+    "deploy": "npm run prebuild && npm run predeploy && wrangler deploy",
+    "start": "wrangler dev",
+    "dev": "wrangler dev",
+    "tail": "wrangler tail",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "clean": "rimraf dist",
+    "prebuild": "npm run clean",
+    "predeploy": "npm run build",
+    "cli": "tsx ./cli/index.ts"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250513.0",
+    "@types/node": "^20.11.5",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.0.4",
+    "wrangler": "^3.47.0",
+    "commander": "^11.1.0",
+    "tsx": "^4.19.2"
+  },
+  "author": "Zuko <tansautn@gmail.com>",
+  "license": "PRIVATE",
+  "description": "",
+  "dependencies": {
+    "jose": "^5.9.6"
+  },
+  "bin": {
+    "ttpt": "./dist/cli/index.js"
+  }
+}

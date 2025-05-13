@@ -1,0 +1,67 @@
+<!--
+  ~          M""""""""`M            dP
+  ~          Mmmmmm   .M            88
+  ~          MMMMP  .MMM  dP    dP  88  .dP   .d8888b.
+  ~          MMP  .MMMMM  88    88  88888"    88'  `88
+  ~          M' .MMMMMMM  88.  .88  88  `8b.  88.  .88
+  ~          M         M  `88888P'  dP   `YP  `88888P'
+  ~          MMMMMMMMMMM    -*-  Created by Zuko  -*-
+  ~
+  ~          * * * * * * * * * * * * * * * * * * * * *
+  ~          * -    - -   F.R.E.E.M.I.N.D   - -    - *
+  ~          * -  Copyright © 2025 (Z) Programing  - *
+  ~          *    -  -  All Rights Reserved  -  -    *
+  ~          * * * * * * * * * * * * * * * * * * * * *
+  -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R2 File Manager</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>R2 File Manager</h1>
+            <div class="breadcrumb" id="breadcrumb">
+                <span class="breadcrumb-item" data-path="">root</span>
+            </div>
+        </header>
+
+        <div class="actions">
+            <button id="uploadBtn" class="btn primary">Upload Files</button>
+            <input type="file" id="fileInput" multiple style="display: none">
+            <button id="newFolderBtn" class="btn">New Folder</button>
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search files...">
+                <button id="searchBtn" class="btn">Search</button>
+            </div>
+        </div>
+
+        <main>
+            <div class="folders-section">
+                <h3>Folders</h3>
+                <div id="foldersList"></div>
+            </div>
+            <div class="file-explorer" id="fileExplorer">
+                <div class="loading">Loading...</div>
+            </div>
+        </main>
+
+        <div id="preview" class="preview-modal">
+            <div class="preview-content">
+                <div class="preview-header">
+                    <h3 id="previewTitle">Preview</h3>
+                    <button class="close-btn" id="closePreview">&times;</button>
+                </div>
+                <div class="preview-body" id="previewBody"></div>
+            </div>
+        </div>
+    </div>
+    <script src="/js/api.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html> 

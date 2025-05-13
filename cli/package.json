@@ -1,0 +1,16 @@
+{
+  "name": "@ttpt/cli",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": {
+    "ttpt": "./index.ts"
+  },
+  "exports": "./index.ts",
+  "dependencies": {
+    "commander": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "tsx": "^4.7.0"
+  }
+} 

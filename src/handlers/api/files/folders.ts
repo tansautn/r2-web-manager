@@ -18,7 +18,7 @@ import { APIContext } from '../../../router/context';
 import { createLogger, LogScope } from '../../../utils/logger';
 import Bootstrapper from '../../../bootstrap';
 
-const logger = createLogger('filesFoldersApi', LogScope.R2);
+const logger = createLogger('filesFoldersApi', LogScope.API_HANDLER);
 
 export async function handleFilesFolders(context: APIContext): Promise<Response> {
   logger.info('Processing GET /api/files/folders');

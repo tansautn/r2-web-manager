@@ -185,10 +185,10 @@ export class Router {
    * @private
    */
   private _findRoute(method: string, path: string): RouteHandler | null {
-    this.logger.debug(`Finding route for ${method} ${path}`);
+//    this.logger.debug(`Finding route for ${method} ${path}`);
     for (const [key, handler] of this.routes) {
       const [routeMethod, routePath] = key.split(':');
-      this.logger.debug(`Checking route: ${routeMethod}:${routePath}`);
+//      this.logger.debug(`Checking route: ${routeMethod}:${routePath}`);
       if ((routeMethod === 'ANY' || routeMethod === method) && this._matchRoute(routePath, path)) {
         this.logger.debug(`Route matched: ${routeMethod}:${routePath}`);
         return handler;

@@ -19,7 +19,7 @@ import { createLogger, LogScope } from '../../../utils/logger';
 import Bootstrapper from '../../../bootstrap';
 import { APIContext } from '../../../router/context';
 
-const logger = createLogger('filesGetApi', LogScope.R2);
+const logger = createLogger('filesGetApi', LogScope.API_HANDLER);
 
 export async function handleFilesGet(context: APIContext): Promise<Response> {
   logger.info('Processing GET /api/files/get');

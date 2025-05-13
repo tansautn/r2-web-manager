@@ -14,7 +14,7 @@
  *          * * * * * * * * * * * * * * * * * * * * *
  */
 
-export type LogScopeType = 'system' | 'bot' | 'router' | 'sheet' | 'webhook' | 'r2' | 'auth';
+export type LogScopeType = 'system' | 'bot' | 'router' | 'sheet' | 'webhook' | 'r2' | 'auth' | 'api_handler';
 
 export const LogScope: Record<string, LogScopeType> = {
   SYSTEM: 'system',
@@ -23,5 +23,6 @@ export const LogScope: Record<string, LogScopeType> = {
   SHEET: 'sheet',
   WEBHOOK: 'webhook',
   R2: 'r2',
-  AUTH: 'auth'
+  AUTH: 'auth',
+  API_HANDLER: 'api_handler'
 }; 

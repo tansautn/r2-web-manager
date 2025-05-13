@@ -18,7 +18,7 @@ import { APIContext, Context } from '../../../router/context';
 import { createLogger, LogScope } from '../../../utils/logger';
 import Bootstrapper from '../../../bootstrap';
 
-const logger = createLogger('filesUploadApi', LogScope.R2);
+const logger = createLogger('filesUploadApi', LogScope.API_HANDLER);
 
 interface FormDataFile {
   arrayBuffer(): Promise<ArrayBuffer>;

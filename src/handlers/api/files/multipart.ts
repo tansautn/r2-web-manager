@@ -15,7 +15,9 @@
  */
 
 import {Context} from "@/router";
+import { createLogger, LogScope } from "@/utils/logger";
 
+const logger = createLogger('multipartApi', LogScope.API_HANDLER);
 
 interface MultipartUploadInit {
   uploadId: string;
@@ -47,7 +49,7 @@ export async function handleMultipartInit(context: Context): Promise<Response> {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    console.error('Failed to initialize multipart upload:', error);
+    logger.error('Failed to initialize multipart upload:', error);
     return new Response(JSON.stringify({ 
       error: 'Failed to initialize multipart upload' 
     }), { 
@@ -80,7 +82,7 @@ export async function handleMultipartUpload(context: Context): Promise<Response>
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    console.error('Failed to upload part:', error);
+    logger.error('Failed to upload part:', error);
     return new Response(JSON.stringify({ 
       error: 'Failed to upload part' 
     }), { 
@@ -91,14 +93,45 @@ export async function handleMultipartUpload(context: Context): Promise<Response>
 }
 
 export async function handleMultipartComplete(context: Context): Promise<Response> {
-  const { key, uploadId, parts } = await context.request.json() as {
+  let requestData;
+  
+  try {
+    // Access the already parsed body from the context
+    // The router middleware already parses the body into context.body for JSON requests
+    if (context.body) {
+      requestData = context.body;
+    } else {
+      // Fallback to parsing the request if context.body is not available
+      requestData = await context.request.json();
+    }
+  } catch (error) {
+    logger.error('Failed to access request body:', error);
+    return new Response(JSON.stringify({ 
+      error: 'Failed to access request body',
+      message: error instanceof Error ? error.message : String(error)
+    }), { 
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Log the received data for debugging
+  logger.info('Received multipart complete data:', requestData);
+
+  const { key, uploadId, parts } = requestData as {
     key: string;
     uploadId: string;
     parts: PartUpload[];
   };
 
-  if (!key || !uploadId || !parts.length) {
-    return new Response('Missing required parameters', { status: 400 });
+  if (!key || !uploadId || !parts || !Array.isArray(parts) || parts.length === 0) {
+    return new Response(JSON.stringify({
+      error: 'Missing or invalid required parameters',
+      received: { key, uploadId, partsCount: parts ? parts.length : 0 }
+    }), { 
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   try {
@@ -116,9 +149,10 @@ export async function handleMultipartComplete(context: Context): Promise<Respons
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    console.error('Failed to complete multipart upload:', error);
+    logger.error('Failed to complete multipart upload:', error);
     return new Response(JSON.stringify({ 
-      error: 'Failed to complete multipart upload' 
+      error: 'Failed to complete multipart upload',
+      message: error instanceof Error ? error.message : String(error)
     }), { 
       status: 500,
       headers: { 'Content-Type': 'application/json' }

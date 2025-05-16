@@ -10,11 +10,13 @@ upload_source_maps = true
 # Cấu hình ASSETS để served static files
 [assets]
 directory = "./public"
+# Cảnh báo: đừng thay đổi tên binding. Nó được sử dụng trong TypeScript của ứng dụng
 binding = "ASSETS"
 run_worker_first = true
 
 # Cấu hình R2 bucket để sử dụng trong File Manager
 [[r2_buckets]]
+# WARN : Don't change the binding name. It's used inside application TypeScript
 binding = 'R2_BUCKET'
 bucket_name = 'zuko'
 preview_bucket_name='preview'

@@ -14,7 +14,7 @@
  *          * * * * * * * * * * * * * * * * * * * * *
  */
 
-#!/usr/bin/env tsx
+
 
 import { Command } from 'commander';
 import { generateWebhookHandler } from './generators/webhook';

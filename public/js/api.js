@@ -44,6 +44,11 @@ class API {
     return response;
   }
 
+  async getConfig() {
+    const response = await this.request('/api/config');
+    return response.json();
+  }
+
   async listFiles(prefix = '') {
     const response = await this.request(`/api/files/list?prefix=${encodeURIComponent(prefix)}`);
     return response.json();

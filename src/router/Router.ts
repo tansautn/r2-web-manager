@@ -129,26 +129,49 @@ export class Router {
     const url = new URL(context.request.url);
     let filePath = url.pathname;
     
+    // Skip static file serving for API routes
+    if (filePath.startsWith('/api/')) {
+      this.logger.debug(`Skipping static file serving for API route: ${filePath}`);
+      return null;
+    }
+    
     // Handle root path
     if (filePath === '/') {
       filePath = '/index.html';
+      this.logger.debug(`Converted root path to: ${filePath}`);
     }
     
     try {
       // Try to fetch file from assets directory instead of public
       this.logger.debug(`Trying to fetch file from assets directory: ${filePath}`);
-      this.logger.debug(`Replaced: ${filePath.replace(/^\/public\//, '')}`);
-      this.logger.debug(`GlobalThis: ${typeof (globalThis as any).ASSETS}`);
-        console.info(await (globalThis as any).ASSETS.list());
-        console.info(Bootstrapper.getInitialized().getEnv())
-        console.info(Bootstrapper.getInitialized().getEnv().ASSETS);
-      const file = await (globalThis as any).ASSETS.get(filePath.replace(/^\/public\//, ''));
-//      const file2 = await (globalThis as any).ASSETS.fetch(filePath.replace(/^\/public\//, ''));
-      this.logger.debug(`File2: ${file}`);
-//      this.logger.debug(`File2: ${file2}`);
-      if (!file) {
+      
+      // Remove /public/ prefix if exists
+      const normalizedPath = filePath.replace(/^\/public\//, '');
+      this.logger.debug(`Normalized path: ${normalizedPath}`);
+      
+      // Check if ASSETS is defined and is an object with get method
+      if (!context.env.ASSETS || typeof context.env.ASSETS.get !== 'function') {
+        this.logger.error(`ASSETS binding is not properly configured: ${typeof context.env.ASSETS}`);
         return null;
       }
+      
+      // Try to get file from ASSETS
+      this.logger.debug(`Getting file from ASSETS: ${normalizedPath}`);
+      let file;
+      try {
+        file = await context.env.ASSETS.get(normalizedPath);
+      } catch (fetchError: any) {
+        this.logger.error(`Error fetching from ASSETS: ${fetchError.message}`);
+        return null;
+      }
+      
+      // Check if file exists
+      if (!file) {
+        this.logger.debug(`File not found in ASSETS: ${normalizedPath}`);
+        return null;
+      }
+      
+      this.logger.info(`Successfully retrieved file from ASSETS: ${normalizedPath}`);
 
       // Get content type based on file extension
       const ext = filePath.split('.').pop()?.toLowerCase() || '';
@@ -175,7 +198,7 @@ export class Router {
 
       return new Response(file, { headers });
     } catch (error) {
-      this.logger.error('Static file serving error', error);
+      this.logger.error(`Static file serving error for path ${filePath}:`, error);
       return null;
     }
   }
@@ -234,12 +257,14 @@ export class Router {
 
     try {
       const context = await this.createApiContext(request, env);
+      
+      // Execute middlewares first (including auth middlewares)
       const midRes = await this._executeMiddleware(context, this.middlewares);
       if (midRes) {
         return midRes;
       }
 
-      // Try to serve static file first
+      // Try to serve static file only after middlewares have been executed (and auth has passed)
       const staticResponse = await this._tryServeStaticFile(context);
       if (staticResponse) {
         const duration = Date.now() - startTime;

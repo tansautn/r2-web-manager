@@ -14,16 +14,40 @@
  *          * * * * * * * * * * * * * * * * * * * * *
  */
 
+let CDN_URL = 'https://your.r2.dev/';
+
 class FileManager {
   constructor() {
     this.api = new API();
     this.currentPath = '';
     this.isSearchMode = false;
     this.searchQuery = '';
-    this.initElements();
-    this.initEventListeners();
-    this.loadFolders();
-    this.loadFiles();
+    this.initApp();
+  }
+
+  async initApp() {
+    try {
+      await this.loadConfig();
+      this.initElements();
+      this.initEventListeners();
+      this.loadFolders();
+      this.loadFiles();
+    } catch (error) {
+      console.error('Failed to initialize app:', error);
+      alert('Failed to initialize app. Please try refreshing the page.');
+    }
+  }
+
+  async loadConfig() {
+    try {
+      const { data } = await this.api.getConfig();
+      if (data && data.cdnBaseUrl) {
+        CDN_URL = data.cdnBaseUrl;
+        console.log('Loaded CDN_URL from config:', CDN_URL);
+      }
+    } catch (error) {
+      console.error('Failed to load config, using default CDN_URL:', error);
+    }
   }
 
   initElements() {
@@ -227,7 +251,7 @@ class FileManager {
       if (uriBtn) {
         uriBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          const fullUrl = 'https://cdn.zuko.pro/' + key;
+          const fullUrl = CDN_URL + key;
           this.copyToClipboard(fullUrl);
         });
       }
@@ -410,79 +434,170 @@ class FileManager {
   }
 
   isPreviewable(key) {
-    return key.match(/\.(jpg|jpeg|png|gif|txt|md|json)$/i);
+    const fileExtension = key.split('.').pop().toLowerCase();
+    
+    return /\.(jpg|jpeg|png|gif|svg|webp|txt|md|json|js|css|html|xml|csv|pdf|mp3|m4a|wav|ogg|aac|mp4|mov|mpeg4|mpeg|webm|avi|mkv)$/i.test(key);
   }
 
   async showPreview(key) {
     try {
-      const fileExtension = key.split('.').pop().toLowerCase();
-      const response = await this.api.getFile(key);
-      const contentType = response.headers.get('content-type');
-      
-      // Set preview title
+      const fileExtension = key.split('.').pop().toLowerCase();      
+      const isAudio = /^(mp3|m4a|wav|ogg|aac)$/i.test(fileExtension);
+      const isVideo = /^(mp4|mov|mpeg4|mpeg|webm|avi|mkv)$/i.test(fileExtension);      
       const fileName = key.split('/').pop();
       document.getElementById('previewTitle').textContent = fileName;
+      this.previewBody.innerHTML = '<div class="loading-preview">Loading preview...</div>';
+      const encodedKey = encodeURIComponent(key);
       
-      if (contentType.startsWith('image/') || /^(jpg|jpeg|png|gif|svg|webp)$/i.test(fileExtension)) {
-        // Image preview
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        this.previewBody.innerHTML = `<img src="${url}" alt="${fileName}">`;
-      } 
-      else if (/^(txt|md|json|js|css|html|xml|csv)$/i.test(fileExtension) || 
-              contentType.includes('text/') || 
-              contentType.includes('application/json')) {
-        // Text preview
-        const text = await response.text();
-        this.previewBody.innerHTML = `<pre>${this.escapeHtml(text)}</pre>`;
-      } 
-      else if (/^(pdf)$/i.test(fileExtension) || contentType.includes('application/pdf')) {
-        // PDF preview
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
+      if (isAudio) {
+        const audioSrc = CDN_URL + key;
         this.previewBody.innerHTML = `
-          <object data="${url}" type="application/pdf" width="100%" height="600px">
-            <p>Unable to display PDF. <a href="${url}" target="_blank">Download</a> instead.</p>
-          </object>
-        `;
-      } 
-      else if (/^(mp3|m4a|wav)$/i.test(fileExtension) || contentType.includes('audio/')) {
-        // Audio preview
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        this.previewBody.innerHTML = `
-          <audio controls style="width: 100%">
-            <source src="${url}" type="${contentType}">
-            Your browser does not support the audio element.
-          </audio>
-        `;
-      }
-      else if (/^(mp4|mov|mpeg4|mpeg)$/i.test(fileExtension) || contentType.includes('video/')) {
-        // Video preview
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        this.previewBody.innerHTML = `
-          <video controls style="max-width: 100%; max-height: 500px">
-            <source src="${url}" type="${contentType}">
-            Your browser does not support the video element.
-          </video>
-        `;
-      }
-      else {
-        // Unsupported format
-        this.previewBody.innerHTML = `
-          <div class="unsupported-format">
-            <p>Cannot preview this file format.</p>
-            <button class="btn primary" id="previewDownloadBtn">Download File</button>
+          <div class="audio-preview">
+            <audio controls style="width: 100%">
+              <source src="${audioSrc}" type="audio/${fileExtension}">
+              Your browser does not support the audio element.
+            </audio>
+            <div class="audio-download">
+              <button class="btn primary" id="audioDownloadBtn">Download Audio</button>
+              <button class="btn" id="audioCopyBtn">Copy Link</button>
+            </div>
           </div>
         `;
         
-        document.getElementById('previewDownloadBtn').addEventListener('click', () => {
-          this.closePreviewModal();
+        document.getElementById('audioDownloadBtn').addEventListener('click', (e) => {
+          e.preventDefault();
           this.downloadFile(key);
         });
+        
+        document.getElementById('audioCopyBtn').addEventListener('click', (e) => {
+          e.preventDefault();
+          this.copyToClipboard(audioSrc);
+          alert('Link copied to clipboard!');
+        });
+      } 
+      else if (isVideo) {
+        const videoSrc = CDN_URL + key;
+        this.previewBody.innerHTML = `
+          <div class="video-preview">
+            <video controls style="max-width: 100%; max-height: 70vh">
+              <source src="${videoSrc}" type="video/${fileExtension === 'mov' ? 'mp4' : fileExtension}">
+              Your browser does not support the video element.
+            </video>
+            <div class="video-download">
+              <button class="btn primary" id="videoDownloadBtn">Download Video</button>
+              <button class="btn" id="videoCopyBtn">Copy Link</button>
+            </div>
+          </div>
+        `;
+        
+        document.getElementById('videoDownloadBtn').addEventListener('click', (e) => {
+          e.preventDefault();
+          this.downloadFile(key);
+        });
+        
+        document.getElementById('videoCopyBtn').addEventListener('click', (e) => {
+          e.preventDefault();
+          this.copyToClipboard(videoSrc);
+          alert('Link copied to clipboard!');
+        });
       }
-
+      else {
+        const response = await this.api.getFile(key);
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType.startsWith('image/') || /^(jpg|jpeg|png|gif|svg|webp)$/i.test(fileExtension)) {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          this.previewBody.innerHTML = `
+            <div class="image-preview">
+              <img src="${url}" alt="${fileName}">
+              <div class="image-download">
+                <button class="btn primary" id="imageDownloadBtn">Download Image</button>
+                <button class="btn" id="imageCopyBtn">Copy Link</button>
+              </div>
+            </div>
+          `;
+          
+          document.getElementById('imageDownloadBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.downloadFile(key);
+          });
+          
+          document.getElementById('imageCopyBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.copyToClipboard(CDN_URL + key);
+            alert('Link copied to clipboard!');
+          });
+        } 
+        else if (/^(txt|md|json|js|css|html|xml|csv)$/i.test(fileExtension) || 
+                contentType.includes('text/') || 
+                contentType.includes('application/json')) {
+          const text = await response.text();
+          this.previewBody.innerHTML = `
+            <pre>${this.escapeHtml(text)}</pre>
+            <div class="text-download">
+              <button class="btn primary" id="textDownloadBtn">Download File</button>
+              <button class="btn" id="textCopyBtn">Copy Link</button>
+            </div>
+          `;
+          
+          document.getElementById('textDownloadBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.downloadFile(key);
+          });
+          
+          document.getElementById('textCopyBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.copyToClipboard(CDN_URL + key);
+            alert('Link copied to clipboard!');
+          });
+        } 
+        else if (/^(pdf)$/i.test(fileExtension) || contentType.includes('application/pdf')) {
+          const pdfSrc = CDN_URL + key;
+          this.previewBody.innerHTML = `
+            <object data="${pdfSrc}" type="application/pdf" width="100%" height="600px">
+              <p>Unable to display PDF. <a href="${pdfSrc}" target="_blank">Download</a> instead.</p>
+            </object>
+            <div class="pdf-download">
+              <button class="btn primary" id="pdfDownloadBtn">Download PDF</button>
+              <button class="btn" id="pdfCopyBtn">Copy Link</button>
+            </div>
+          `;
+          
+          document.getElementById('pdfDownloadBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.downloadFile(key);
+          });
+          
+          document.getElementById('pdfCopyBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.copyToClipboard(pdfSrc);
+            alert('Link copied to clipboard!');
+          });
+        } 
+        else {
+          this.previewBody.innerHTML = `
+            <div class="unsupported-format">
+              <p>Cannot preview this file format.</p>
+              <div class="unsupported-actions">
+                <button class="btn primary" id="previewDownloadBtn">Download File</button>
+                <button class="btn" id="previewCopyBtn">Copy Link</button>
+              </div>
+            </div>
+          `;
+          
+          document.getElementById('previewDownloadBtn').addEventListener('click', () => {
+            this.closePreviewModal();
+            this.downloadFile(key);
+          });
+          
+          document.getElementById('previewCopyBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.copyToClipboard(CDN_URL + key);
+            alert('Link copied to clipboard!');
+          });
+        }
+      }
       this.preview.style.display = 'block';
     }
     catch(error) {
@@ -521,5 +636,7 @@ class FileManager {
   }
 }
 
-// Initialize the app
-new FileManager();
+// Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+  new FileManager();
+});

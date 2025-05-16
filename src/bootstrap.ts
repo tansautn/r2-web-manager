@@ -73,6 +73,25 @@ export class Bootstrapper {
             }
             this.r2Service = new R2Service(this.env.R2_BUCKET);
             
+            // Verify ASSETS binding
+            this.logger.info('Verifying ASSETS binding...');
+            if (!this.env.ASSETS) {
+                this.logger.warn('ASSETS binding is not available - static file serving will not work');
+            } else {
+                try {
+                    // Attempt to log the available methods on ASSETS
+                    const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(this.env.ASSETS));
+                    this.logger.info(`ASSETS binding is available with methods: ${methods.join(', ')}`);
+                    
+                    // Verify get method exists
+                    if (!methods.includes('get')) {
+                        this.logger.warn('ASSETS binding does not have a get method - static file serving may not work correctly');
+                    }
+                } catch (assetsError) {
+                    this.logger.error('Error inspecting ASSETS binding:', assetsError);
+                }
+            }
+            
             this.initialized = true;
             this.logger.info('Bootstrap completed successfully');
         } catch (error) {

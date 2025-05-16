@@ -1,8 +1,8 @@
 {
   "name": "r2m",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "main": "src/index.ts",
-  "private" : true,
+  "private": true,
   "scripts": {
     "deploy": "npm run prebuild && npm run predeploy && wrangler deploy",
     "start": "wrangler dev",
@@ -19,11 +19,11 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250513.0",
     "@types/node": "^20.11.5",
-    "rimraf": "^5.0.5",
-    "typescript": "^5.0.4",
-    "wrangler": "^3.47.0",
     "commander": "^11.1.0",
-    "tsx": "^4.19.2"
+    "rimraf": "^5.0.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.0.4",
+    "wrangler": "^4.15.2"
   },
   "author": "Zuko <tansautn@gmail.com>",
   "license": "PRIVATE",

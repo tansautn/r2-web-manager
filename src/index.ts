@@ -27,6 +27,7 @@ import { handleFilesDelete } from './handlers/api/files/delete';
 import { handleMultipartInit, handleMultipartUpload, handleMultipartComplete } from './handlers/api/files/multipart';
 import { handleFilesFolders } from './handlers/api/files/folders';
 import { handleFilesSearch } from './handlers/api/files/search';
+import { handleGetConfig } from './handlers/api/config';
 import {apiHandlers} from "@/handlers/__generated";
 
 const mainLogger = logger.child('Main');
@@ -37,6 +38,7 @@ router.use(debugOnly());
 // Protected API routes with token auth
 router.use(async (context: Context, next: () => Promise<Response | void>) => {
   if ((new URL(context.request.url)).pathname.startsWith('/api')) {
+    logger.info('Request matched. Doing authorization via API Token')
     return apiTokenAuth((globalThis as any).API_TOKEN)(context, next);
   }
   return next();
@@ -45,16 +47,21 @@ router.use(async (context: Context, next: () => Promise<Response | void>) => {
 // Protected web interface with basic auth
 router.use(async (context: Context, next: () => Promise<Response | void>) => {
   const url = new URL(context.request.url);
-  // Only apply basic auth to root and static files
-  if (url.pathname === '/' || url.pathname.startsWith('/public')) {
-    const usr = (globalThis as any).ADMIN_AUTH_BASIC_USR_PWD.split(':')[0];
-    const pwd = (globalThis as any).ADMIN_AUTH_BASIC_USR_PWD.split(':')[1];
-    return basicAuth(
-      usr,
-      pwd
-    )(context, next);
+  
+  // Skip auth for API routes (they use token auth)
+  if (url.pathname.startsWith('/api')) {
+    return next();
   }
-  return next();
+  
+  // Apply basic auth to all static content (served via ASSETS) and web interface
+  // This works because middleware runs before static file serving in Router.matchThenDispatch
+  logger.info('Applying Basic Auth to static content or web interface');
+  const usr = (globalThis as any).ADMIN_AUTH_BASIC_USR_PWD.split(':')[0];
+  const pwd = (globalThis as any).ADMIN_AUTH_BASIC_USR_PWD.split(':')[1];
+  return basicAuth(
+    usr,
+    pwd
+  )(context, next);
 });
 
 // Register API routes
@@ -64,6 +71,7 @@ router.post('/api/files/upload', handleFilesUpload);
 router.delete('/api/files/delete', handleFilesDelete);
 router.get('/api/files/folders', handleFilesFolders);
 router.get('/api/files/search', handleFilesSearch);
+router.get('/api/config', handleGetConfig);
 
 // Add multipart upload routes
 router.post('/api/files/multipart/init', handleMultipartInit);
@@ -108,8 +116,18 @@ export default {
     env: Record<string, any>,
     ctx: ExtendedExecutionContext
   ): Promise<Response> {
-    mainLogger.info('Request received');
+    mainLogger.info(`Request received: ${request.method} ${new URL(request.url).pathname}`);
+    
+    // Gán các biến môi trường vào globalThis (nhưng không nên phụ thuộc vào nó)
+    // Thay vào đó, nên truyền env trực tiếp
     Object.assign(globalThis, env);
+    
+    // Log ASSETS binding để debug
+    mainLogger.debug(`ASSETS binding: ${typeof env.ASSETS}`);
+    if (env.ASSETS) {
+      mainLogger.debug(`ASSETS has methods: ${Object.getOwnPropertyNames(Object.getPrototypeOf(env.ASSETS)).join(', ')}`);
+    }
+    
     return handleRequest(request, env, { ...ctx, props: {} });
   }
 }; 

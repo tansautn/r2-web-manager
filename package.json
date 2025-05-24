@@ -26,7 +26,7 @@
     "wrangler": "^4.15.2"
   },
   "author": "Zuko <tansautn@gmail.com>",
-  "license": "PRIVATE",
+  "license": "MIT",
   "description": "",
   "dependencies": {
     "jose": "^5.9.6"

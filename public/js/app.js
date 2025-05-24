@@ -16,6 +16,15 @@
 
 let CDN_URL = 'https://your.r2.dev/';
 
+// Configure NProgress
+NProgress.configure({
+  minimum: 0.1,
+  showSpinner: true,
+  trickleSpeed: 200,
+  easing: 'ease',
+  speed: 500
+});
+
 class FileManager {
   constructor() {
     this.api = new API();
@@ -79,23 +88,29 @@ class FileManager {
 
   async loadFolders() {
     try {
+      NProgress.start();
       const folders = await listFolders();
       this.renderFolders(folders);
+      NProgress.done();
     } catch (error) {
       console.error('Failed to load folders:', error);
       this.showError('Failed to load folders');
+      NProgress.done();
     }
   }
 
   async loadFiles() {
     try {
+      NProgress.start();
       const {data} = await this.api.listFiles(this.currentPath);
       this.renderFiles(data);
       this.updateBreadcrumb();
+      NProgress.done();
     }
     catch(error) {
       console.error('Failed to load files:', error);
       this.showError('Failed to load files');
+      NProgress.done();
     }
   }
 
@@ -108,13 +123,16 @@ class FileManager {
     }
 
     try {
+      NProgress.start();
       this.isSearchMode = true;
       this.searchQuery = query;
       const results = await searchFiles(query, this.currentPath);
       this.renderSearchResults(results);
+      NProgress.done();
     } catch (error) {
       console.error('Failed to search files:', error);
       this.showError('Failed to search files');
+      NProgress.done();
     }
   }
 
@@ -312,7 +330,16 @@ class FileManager {
   async handleFileUpload(event) {
     const files = Array.from(event.target.files);
     const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB chunks
-
+    
+    if (files.length === 0) return;
+    
+    // Start NProgress
+    NProgress.start();
+    
+    // Calculate total size for all files
+    const totalSize = files.reduce((total, file) => total + file.size, 0);
+    let uploadedSize = 0;
+    
     for (const file of files) {
       try {
         const key = this.currentPath + file.name;
@@ -323,6 +350,7 @@ class FileManager {
         // Upload parts
         const parts = [];
         let partNumber = 1;
+        let fileUploadedSize = 0;
         
         for (let start = 0; start < file.size; start += CHUNK_SIZE) {
           const chunk = file.slice(start, Math.min(start + CHUNK_SIZE, file.size));
@@ -335,9 +363,17 @@ class FileManager {
           
           partNumber++;
           
-          // Update progress (optional)
-          const progress = Math.round((start + chunk.size) / file.size * 100);
-          console.log(`Upload progress: ${progress}%`);
+          // Update progress
+          fileUploadedSize += chunk.size;
+          uploadedSize += chunk.size;
+          const totalProgress = uploadedSize / totalSize;
+          
+          // Update NProgress
+          NProgress.set(totalProgress);
+                    // Update progress (optional)
+                    const progress = Math.round((start + chunk.size) / file.size * 100);
+                    console.log(`Upload progress: ${progress}%`);
+          console.log(`N progress for ${file.name}: ${totalProgress}%`);
         }
         
         // Complete upload
@@ -345,9 +381,13 @@ class FileManager {
       } catch (error) {
         console.error('Failed to upload file:', error);
         this.showError(`Failed to upload ${file.name}`);
+        // Don't stop NProgress here, continue with other files
       }
     }
 
+    // Complete NProgress
+    NProgress.done();
+    
     this.fileInput.value = '';
     this.loadFiles();
     this.loadFolders(); // Refresh folders list
@@ -377,6 +417,7 @@ class FileManager {
     }
 
     try {
+      NProgress.start();
       await this.api.deleteFile(key);
       
       // Refresh files display
@@ -390,15 +431,18 @@ class FileManager {
       if (key.endsWith('/')) {
         this.loadFolders();
       }
+      NProgress.done();
     }
     catch(error) {
       console.error('Failed to delete file:', error);
       this.showError('Failed to delete file');
+      NProgress.done();
     }
   }
 
   async downloadFile(key) {
     try {
+      NProgress.start();
       const response = await this.api.getFile(key);
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -409,10 +453,12 @@ class FileManager {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      NProgress.done();
     }
     catch(error) {
       console.error('Failed to download file:', error);
       this.showError('Failed to download file');
+      NProgress.done();
     }
   }
 
@@ -441,6 +487,7 @@ class FileManager {
 
   async showPreview(key) {
     try {
+      NProgress.start();
       const fileExtension = key.split('.').pop().toLowerCase();      
       const isAudio = /^(mp3|m4a|wav|ogg|aac)$/i.test(fileExtension);
       const isVideo = /^(mp4|mov|mpeg4|mpeg|webm|avi|mkv)$/i.test(fileExtension);      
@@ -474,6 +521,7 @@ class FileManager {
           this.copyToClipboard(audioSrc);
           alert('Link copied to clipboard!');
         });
+        NProgress.done();
       } 
       else if (isVideo) {
         const videoSrc = CDN_URL + key;
@@ -500,6 +548,7 @@ class FileManager {
           this.copyToClipboard(videoSrc);
           alert('Link copied to clipboard!');
         });
+        NProgress.done();
       }
       else {
         const response = await this.api.getFile(key);
@@ -528,6 +577,7 @@ class FileManager {
             this.copyToClipboard(CDN_URL + key);
             alert('Link copied to clipboard!');
           });
+          NProgress.done();
         } 
         else if (/^(txt|md|json|js|css|html|xml|csv)$/i.test(fileExtension) || 
                 contentType.includes('text/') || 
@@ -551,6 +601,7 @@ class FileManager {
             this.copyToClipboard(CDN_URL + key);
             alert('Link copied to clipboard!');
           });
+          NProgress.done();
         } 
         else if (/^(pdf)$/i.test(fileExtension) || contentType.includes('application/pdf')) {
           const pdfSrc = CDN_URL + key;
@@ -574,6 +625,7 @@ class FileManager {
             this.copyToClipboard(pdfSrc);
             alert('Link copied to clipboard!');
           });
+          NProgress.done();
         } 
         else {
           this.previewBody.innerHTML = `
@@ -596,6 +648,7 @@ class FileManager {
             this.copyToClipboard(CDN_URL + key);
             alert('Link copied to clipboard!');
           });
+          NProgress.done();
         }
       }
       this.preview.style.display = 'block';
@@ -603,6 +656,7 @@ class FileManager {
     catch(error) {
       console.error('Failed to preview file:', error);
       this.showError('Failed to preview file');
+      NProgress.done();
     }
   }
   

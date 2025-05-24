@@ -14,6 +14,12 @@ directory = "./public"
 binding = "ASSETS"
 run_worker_first = true
 
+# Turn on logging persitent. Then you can see the log inside Cloudflare dashboard
+# Bật persitent log. Bạn có thể xem log của ứng dụng trong Cloudflare dashboard
+[observability.logs]
+enabled = true
+invocation_logs = true
+
 # Cấu hình R2 bucket để sử dụng trong File Manager
 [[r2_buckets]]
 # WARN : Don't change the binding name. It's used inside application TypeScript

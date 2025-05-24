@@ -19,7 +19,7 @@ import router from './router';
 import logger from './utils/logger';
 import { ExtendedExecutionContext } from './types/cloudflare';
 import type { Context } from './router';
-import { apiTokenAuth, basicAuth, debugOnly } from './middleware/auth';
+import {apiTokenAuth, basicAuth, debugOnly, sendSessionCookie} from "./middleware/auth";
 import { handleFilesList } from './handlers/api/files/list';
 import { handleFilesGet } from './handlers/api/files/get';
 import { handleFilesUpload } from './handlers/api/files/upload';
@@ -34,24 +34,24 @@ const mainLogger = logger.child('Main');
 
 // Global middleware
 router.use(debugOnly());
-
+router.use(sendSessionCookie);
 // Protected API routes with token auth
-router.use(async (context: Context, next: () => Promise<Response | void>) => {
-  if ((new URL(context.request.url)).pathname.startsWith('/api')) {
-    logger.info('Request matched. Doing authorization via API Token')
-    return apiTokenAuth((globalThis as any).API_TOKEN)(context, next);
-  }
-  return next();
-});
+//router.use(async (context: Context, next: () => Promise<Response|void>): Promise<Response|void> => {
+//  if ((new URL(context.request.url)).pathname.startsWith('/api')) {
+//    logger.info('Request matched. Doing authorization via API Token')
+//    return apiTokenAuth((globalThis as any).API_TOKEN)(context, next);
+//  }
+//  return next();
+//});
 
 // Protected web interface with basic auth
-router.use(async (context: Context, next: () => Promise<Response | void>) => {
+router.use(async (context: Context, next: (ctx: any) => Promise<Response | void>): Promise<Response|void> => {
   const url = new URL(context.request.url);
   
-  // Skip auth for API routes (they use token auth)
-  if (url.pathname.startsWith('/api')) {
-    return next();
-  }
+//  // Skip auth for API routes (they use token auth)
+//  if (url.pathname.startsWith('/api')) {
+//    return next(context);
+//  }
   
   // Apply basic auth to all static content (served via ASSETS) and web interface
   // This works because middleware runs before static file serving in Router.matchThenDispatch

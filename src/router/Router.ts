@@ -14,10 +14,10 @@
  *          * * * * * * * * * * * * * * * * * * * * *
  */
 
-import {createLogger, LogScope} from '../utils/logger';
-import {APIContext, Context} from './context';
+import {createLogger, LogScope} from "../utils/logger";
+import {APIContext, Context} from "./context";
 
-type Middleware = (context: Context, next: () => Promise<void | Response>) => Promise<Response | void>;
+type Middleware = (context: Context, next: (ctx?: any) => Promise<Response|void>) => Promise<Response|void>
 type RouteHandler = (context: APIContext) => Promise<Response>;
 
 
@@ -33,8 +33,7 @@ export class Router
     this.routes = new Map();
     this.middlewares = [];
     this.fallbackHandler = null;
-    const logger = createLogger('Router', LogScope.ROUTER);
-    this.logger = logger;
+    this.logger = createLogger('Router', LogScope.ROUTER);
   }
 
   /**

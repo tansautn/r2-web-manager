@@ -14,28 +14,39 @@
  *          * * * * * * * * * * * * * * * * * * * * *
  */
 
+
 //import { TelegramUpdate } from '../types/telegram';
-import {parseString} from "../utils/paramStrParser";
-import logger from "../utils/logger";
+
 
 export interface Context {
-    request: Request;
-    env: Record<string, any>;
-    parse(): Promise<void>;
+  isAuthPassed: boolean;
+  isApiAuthPassed: boolean;
+  request: Request;
+  env: Record<string, any>;
+
+  parse(): Promise<void>;
 }
+
+
 export abstract class Context implements Context {
-    request: Request;
-    env: Record<string, any>;
-    body?: any;
-    update?: any;
-    parse(): Promise<void> {
-        return Promise.resolve();
-    }
-    constructor(request: Request, env: Record<string, any>) {
-        this.request = request;
-        this.env = env;
-    }
+  isAuthPassed: boolean = false;
+  isApiAuthPassed: boolean = false;
+  request: Request;
+  env: Record<string, any>;
+  body?: any;
+  update?: any;
+
+  parse(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  constructor(request: Request, env: Record<string, any>) {
+    this.request = request;
+    this.env = env;
+  }
 }
+
+
 // export class TelegramContext extends Context {
 //     request!: Request;
 //     env!: Record<string, any>;
@@ -159,80 +170,81 @@ export abstract class Context implements Context {
 // }
 
 interface FormDataFile {
-    arrayBuffer(): Promise<ArrayBuffer>;
-    name: string;
-    size: number;
-    type: string;
+  arrayBuffer(): Promise<ArrayBuffer>;
+
+  name: string;
+  size: number;
+  type: string;
 }
 
+
 export class APIContext extends Context {
-    request: Request;
-    env: Record<string, any>;
-    query: URLSearchParams;
-    body?: any;
-    files: Map<string, FormDataFile>;
-    formData: Map<string, string>;
+  request: Request;
+  env: Record<string, any>;
+  query: URLSearchParams;
+  body?: any;
+  files: Map<string, FormDataFile>;
+  formData: Map<string, string>;
 
-    constructor(request: Request, env: Record<string, any>) {
-        super(request, env);
-        this.request = request;
-        this.env = env;
-        this.query = new URL(request.url).searchParams;
-        this.files = new Map();
-        this.formData = new Map();
-    }
+  constructor(request: Request, env: Record<string, any>) {
+    super(request, env);
+    this.request = request;
+    this.env = env;
+    this.query = new URL(request.url).searchParams;
+    this.files = new Map();
+    this.formData = new Map();
+  }
 
-    async parse(): Promise<void> {
-        const contentType = this.request.headers.get('content-type') || '';
+  async parse(): Promise<void> {
+    const contentType = this.request.headers.get("content-type") || "";
 
-        if (contentType.includes('application/json')) {
-            this.body = await this.request.json();
-        } 
-        else if (contentType.includes('multipart/form-data')) {
-            const formData = await this.request.formData();
-            for (const [key, value] of formData.entries()) {
-                const fileValue = value as unknown;
-                if (fileValue instanceof File || fileValue instanceof Blob) {
-                    this.files.set(key, {
-                        arrayBuffer: () => fileValue.arrayBuffer(),
-                        name: 'name' in fileValue ? (fileValue as File).name : key,
-                        size: fileValue.size,
-                        type: fileValue.type
-                    });
-                } else {
-                    this.formData.set(key, value.toString());
-                }
-            }
+    if (contentType.includes("application/json")) {
+      this.body = await this.request.json();
+    } else if (contentType.includes("multipart/form-data")) {
+      const formData = await this.request.formData();
+      for (const [key, value] of formData.entries()) {
+        const fileValue = value as unknown;
+        if (fileValue instanceof File || fileValue instanceof Blob) {
+          this.files.set(key, {
+            arrayBuffer: () => fileValue.arrayBuffer(),
+            name: "name" in fileValue ? (fileValue as File).name : key,
+            size: fileValue.size,
+            type: fileValue.type,
+          });
+        } else {
+          this.formData.set(key, value.toString());
         }
+      }
     }
+  }
 
-    // Query params helpers
-    getQueryParam(key: string): string | null {
-        return this.query.get(key);
-    }
+  // Query params helpers
+  getQueryParam(key: string): string | null {
+    return this.query.get(key);
+  }
 
-    getRequiredQueryParam(key: string): string {
-        const value = this.query.get(key);
-        if (!value) {
-            throw new Error(`Required query parameter '${key}' is missing`);
-        }
-        return value;
+  getRequiredQueryParam(key: string): string {
+    const value = this.query.get(key);
+    if (!value) {
+      throw new Error(`Required query parameter '${key}' is missing`);
     }
+    return value;
+  }
 
-    // Form data helpers
-    getFormData(key: string): string | null {
-        return this.formData.get(key) || null;
-    }
+  // Form data helpers
+  getFormData(key: string): string | null {
+    return this.formData.get(key) || null;
+  }
 
-    getFile(key: string): FormDataFile | null {
-        return this.files.get(key) || null;
-    }
+  getFile(key: string): FormDataFile | null {
+    return this.files.get(key) || null;
+  }
 
-    getRequiredFile(key: string): FormDataFile {
-        const file = this.files.get(key);
-        if (!file) {
-            throw new Error(`Required file '${key}' is missing`);
-        }
-        return file;
+  getRequiredFile(key: string): FormDataFile {
+    const file = this.files.get(key);
+    if (!file) {
+      throw new Error(`Required file '${key}' is missing`);
     }
+    return file;
+  }
 }
